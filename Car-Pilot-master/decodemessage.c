@@ -51,14 +51,5 @@ void msgrefresh(char* b, struct _MessageInfo* msg, uint8_t who){
     msg->pass_status[2]=a[10]&(3<<4);
     msg->pass_status[3]=a[10]&(3<<2);
     msg->pass_status[4]=a[10]&3;
-
- /*
- //A/Bcheat A/Bscore
- int Acheat,Bcheat,Ascore,Bscore;
- Acheat=a[31];
- Bcheat=a[32];
- Ascore=a[33]*256+a[34];
- Bscore=a[35]*256+a[36];
- */
 }
 
