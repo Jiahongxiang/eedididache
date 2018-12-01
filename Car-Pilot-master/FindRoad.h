@@ -6,10 +6,15 @@
 #define FINDROAD_H
 
 //#define DEBUG_MODE
-#define PRINT_INFO
+//#define PRINT_INFO
+//#define TEST_TIME
+
+#ifdef TEST_TIME
+#include <time.h>
+#endif
 
 #ifndef MY_PI
-#define MY_PI 3.141592654F
+#define MY_PI 3.141592654f
 #endif
 
 #define CARMOVE_POOL_LEN 100
@@ -36,9 +41,22 @@ typedef struct _CarMove CarMove;
 struct _move_list{
     int num;
     CarMove *data;
-		//CarMove data[CARMOVE_POOL_LEN];
+    //CarMove data[CARMOVE_POOL_LEN];
 };
 typedef struct _move_list MoveList;
+
+struct _map_pos{
+    int x, y;
+};
+
+typedef struct _map_pos MapPos;
+
+struct _pos_list{
+    int num;
+    MapPos *data;
+};
+
+typedef struct _pos_list PosList;
 
 struct _Edge{
     int a, b, w;
@@ -50,6 +68,24 @@ struct _edge_list{
     int num;
     Edge* data;
 };
+
+
+
+struct _real_edge{
+    int x1, y1, x2, y2;
+};
+
+typedef struct _real_edge RealEdge;
+
+
+
+struct _r_edge_list{
+    int num;
+    RealEdge* data;
+};
+
+typedef struct _r_edge_list REdgeList;
+
 
 /**
  * 通信协议提取信息。
@@ -80,12 +116,35 @@ MoveList find_road(int st_x, int st_y, int ed_x, int ed_y);
 
 CarMove get_next_move(int st_x, int st_y, int ed_x, int ed_y);
 
-CarMove get_next_move_with_angle(int st_x, int st_y, int ed_x, int ed_y, short curAngle);
+
+
+/**
+ * 打印moveList的内容到标准输出
+ * @param moveList
+ */
+void print_move_list(MoveList moveList);
+
+/**
+ * 打印posList的内容到stdout
+ * @param posList
+ */
+void print_pos_list(PosList posList);
 
 
 CarMove GetNextMove(MessageInfo info);
 
-CarMove GetNextMoveWithAngle(MessageInfo info, short curAngle);
+
+
+/**
+ * 获取一个PosList,内存需要调用deletePosList自己释放
+ * @param info
+ * @param curAngle
+ * @return
+ */
+PosList GetPosListWithAngle(MessageInfo info, short curAngle);
+
+MapPos GetNextPosWithAngle(MessageInfo info, short curAngle);
+
 
 #ifdef DEBUG_MODE
 void FindAllDis();
@@ -96,6 +155,8 @@ EdgeList dijkstra(int st, int ed);
 void deleteEdgeList(EdgeList *list);
 
 void deleteMoveList(MoveList *moveList);
+
+void deletePosList(PosList *list);
 
 
 

@@ -19,12 +19,41 @@ CarMove movePool[CARMOVE_POOL_LEN];
 
 static int carMovePoolTop = 0;
 
+#ifdef TEST_TIME
+clock_t begin_t;
+#endif
+
 
 Edge getEdge(int a, int b, int w)
 {
     Edge tempEdge;
     tempEdge.a = a; tempEdge.b = b; tempEdge.w = w;
     return tempEdge;
+}
+
+MapPos getPos(int x, int y)
+{
+    MapPos tempPos;
+    tempPos.x = x, tempPos.y = y;
+    return tempPos;
+}
+
+MapPos getPosFromIndex(int index)
+{
+    return getPos(points_x[index - 1], points_y[index - 1]);
+}
+
+
+RealEdge getRealEdge(int x1, int y1, int x2, int y2)
+{
+    RealEdge tempEdge;
+    tempEdge.x1 = x1, tempEdge.y1 = y1, tempEdge.x2 = x2, tempEdge.y2 = y2;
+    return tempEdge;
+}
+
+RealEdge getRealEdgeFromEdge(Edge *edge)
+{
+    return getRealEdge(points_x[edge->a - 1], points_y[edge->a - 1], points_x[edge->b - 1], points_y[edge->b - 1]);
 }
 
 
@@ -37,11 +66,23 @@ void addEdge(int a, int b, int w)
 EdgeList initEdgeList(int num)
 {
     EdgeList tempList;
-		static int edgePoolTop = 0;
+    static int edgePoolTop = 0;
 #ifdef PRINT_INFO
-		printf("prepare to malloc %d Edge total %lu Bytes \n", num, num * sizeof(Edge) );
+    printf("prepare to malloc %d Edge total %lu Bytes \n", num, num * sizeof(Edge) );
 #endif
     tempList.data = (Edge*)malloc(num * sizeof(Edge));
+    tempList.num = num;
+    return tempList;
+}
+
+REdgeList initREdgeList(int num)
+{
+    REdgeList tempList;
+    static int edgePoolTop = 0;
+#ifdef PRINT_INFO
+    printf("prepare to malloc %d Edge total %lu Bytes \n", num, num * sizeof(Edge) );
+#endif
+    tempList.data = (RealEdge*)malloc(num * sizeof(RealEdge));
     tempList.num = num;
     return tempList;
 }
@@ -56,19 +97,28 @@ void deleteEdgeList(EdgeList *list)
     }
 }
 
+void deleteREdgeList(REdgeList *list)
+{
+    if(list) {
+        if(list->data)
+            free(list->data);
+        list->data = NULL;
+        list->num = 0;
+    }
+}
 
 
 MoveList initMoveList(int num)
 {
     MoveList tempList;
-	#ifdef PRINT_INFO
-		printf("prepare to malloc %d of CarMove \n", num);
-	#endif
-		//carMovePoolTop = 0;
-		tempList.data = movePool + carMovePoolTop;
-		carMovePoolTop += num;
-	//tempList.data = (CarMove*)malloc(num * sizeof(CarMove));
-	
+#ifdef PRINT_INFO
+    printf("prepare to malloc %d of CarMove \n", num);
+#endif
+    //carMovePoolTop = 0;
+    tempList.data = movePool + carMovePoolTop;
+    carMovePoolTop += num;
+    //tempList.data = (CarMove*)malloc(num * sizeof(CarMove));
+
     tempList.num = num;
     return tempList;
 }
@@ -81,9 +131,30 @@ void deleteMoveList(MoveList *moveList)
 #endif
         if(moveList->data)
             //free(moveList->data);
-						carMovePoolTop -= moveList->num;
+            carMovePoolTop -= moveList->num;
         //moveList->data = NULL;
         moveList->num = 0;
+    }
+}
+
+PosList initPosList(int num)
+{
+    PosList tempList;
+#ifdef PRINT_INFO
+    printf("prepare to malloc %d Pos total %lu Bytes \n", num, num * sizeof(Edge) );
+#endif
+    tempList.data = (MapPos*)malloc(num * sizeof(MapPos));
+    tempList.num = num;
+    return tempList;
+}
+
+void deletePosList(PosList *list)
+{
+    if(list) {
+        if(list->data)
+            free(list->data);
+        list->data = NULL;
+        list->num = 0;
     }
 }
 
@@ -119,7 +190,7 @@ short minDis[max_points_num + 1];
 int preNode[max_points_num + 1];
 EdgeList dijkstra(int st, int ed)
 {
-	
+
     initDis();
 #ifdef PRINT_INFO
     printf("after init dis in dijkstra\n");
@@ -141,7 +212,7 @@ EdgeList dijkstra(int st, int ed)
         }
         vis[closestIndex] = 1;
         for(int j = 1; j <= n; ++j) {
-            if (minDis[j] > tempMinDis + edgeMap[closestIndex][j]) {
+            if (!vis[j] && minDis[j] > tempMinDis + edgeMap[closestIndex][j]) {
                 minDis[j] = tempMinDis + edgeMap[closestIndex][j];
                 preNode[j] = closestIndex;
             }
@@ -233,7 +304,7 @@ int isRoundAbout(int x1, int y1, int x2, int y2)
 CarMove coreGetCarMove(int x1, int y1, int x2, int y2, short angle1, short angle2)
 {
 #ifdef PRINT_INFO
-		printf("core GetCarMove from (%d, %d) to (%d, %d) angle1: %d, angle2: %d \n",x1, y1, x2, y2, angle1, angle2);
+    printf("core GetCarMove from (%d, %d) to (%d, %d) angle1: %d, angle2: %d \n",x1, y1, x2, y2, angle1, angle2);
 #endif
     short delta_angle = angle2 - angle1, turn_angle = 0;
     // int direction = 0;
@@ -309,7 +380,7 @@ CarMove getCarMoveFromPoints(int point1, int point2)
     short angle1 = points_angle[point1 - 1], angle2 = points_angle[point2 - 1];
     int x1 = points_x[point1 - 1], x2 = points_x[point2 - 1], y1 = points_y[point1 - 1], y2 = points_y[point2 - 1];
 #ifdef PRINT_INFO
-		printf("get carMove from point index %d (%d, %d), point %d (%d, %d) ", point1, x1, y1, point2, x2, y2);
+    printf("get carMove from point index %d (%d, %d), point %d (%d, %d) ", point1, x1, y1, point2, x2, y2);
 #endif
     return coreGetCarMove(x1, y1, x2, y2, angle1, angle2);
 }
@@ -319,9 +390,9 @@ CarMove getCarMoveFromPoints(int point1, int point2)
 MoveList find_road(int st_x, int st_y, int ed_x, int ed_y)
 {
 #ifdef PRINT_INFO
-		printf("begin find_road \n");
+    printf("begin find_road \n");
 #endif
-	int be_edge_index = use_map[st_x][st_y], ed_edge_index = use_map[ed_x][ed_y];
+    int be_edge_index = use_map[st_x][st_y], ed_edge_index = use_map[ed_x][ed_y];
     int s1 = e_ed[be_edge_index - 1], s2 = e_be[ed_edge_index - 1];
     int haveFirstMove = 0, haveLastMove = 0;
     short angle1, angle2;
@@ -349,7 +420,7 @@ MoveList find_road(int st_x, int st_y, int ed_x, int ed_y)
             lastMove = coreGetCarMove(points_x[s2 - 1], points_y[s2 - 1], ed_x, ed_y, points_angle[s2 - 1], angle2);
         }
 #ifdef PRINT_INFO
-				printf("prepare dijkstra \n");
+        printf("prepare dijkstra \n");
 #endif
         EdgeList edgeList = dijkstra(s1, s2);
 #ifdef PRINT_INFO
@@ -357,7 +428,7 @@ MoveList find_road(int st_x, int st_y, int ed_x, int ed_y)
 #endif
         moveList = initMoveList(edgeList.num + haveFirstMove + haveLastMove);
 #ifdef PRINT_INFO
-		printf("after initMoveList \n");
+        printf("after initMoveList \n");
 #endif
         if (haveFirstMove == 1)
             moveList.data[0] = firstMove;
@@ -367,11 +438,11 @@ MoveList find_road(int st_x, int st_y, int ed_x, int ed_y)
             moveList.data[i + haveFirstMove] = getCarMoveFromPoints(edgeList.data[i].a, edgeList.data[i].b);
         }
 #ifdef PRINT_INFO
-		printf("before delete EdgeList \n");
+        printf("before delete EdgeList \n");
 #endif
         deleteEdgeList(&edgeList);
     }
-		
+
     return moveList;
 }
 
@@ -440,11 +511,37 @@ int findNearsetEdgeIndex(int x1, int y1)
     return 0;
 }
 
+float getLength(int x, int y)
+{
+    return sqrtf(x * x + y * y);
+}
 
-MoveList find_road_with_angle(int st_x, int st_y, int ed_x, int ed_y, short curAngle)
+
+CarMove getMoveFromEdges(RealEdge *edge1, RealEdge *edge2)
+{
+    int x1 = edge1->x2 - edge1->x1, x2 = edge2->x2 - edge2->x1;
+    int y1 = edge1->y2 - edge1->y1, y2 = edge2->y2 - edge2->y1;
+    int cross = x1 * y2 - x2 * y1;
+    float angle = -asinf(cross / getLength(x1, y1) / getLength(x2, y2)) * 180.0f / (float)M_PI;
+    CarMove carMove;
+    carMove.start_x = edge1->x2, carMove.start_y = edge1->y2;
+    carMove.dest_x = edge1->x2, carMove.dest_y = edge1->y2;
+    carMove.dis = 0.0f;
+    carMove.angle = (short)angle;
+    carMove.r = 0.00001;
+    carMove.type = 2;
+    return carMove;
+}
+
+
+
+PosList find_road_with_angle(int st_x, int st_y, int ed_x, int ed_y, short curAngle)
 {
 #ifdef PRINT_INFO
     printf("begin find_road from (%d, %d) to (%d, %d) cur Angle %d\n", st_x, st_y, ed_x, ed_y, curAngle);
+#endif
+#ifdef TEST_TIME
+    printf("before find edge index use time %lf s \n", 1.0 * (clock() - begin_t) / CLOCKS_PER_SEC);
 #endif
     int be_edge_index = use_map[st_x][st_y], ed_edge_index = use_map[ed_x][ed_y];
     if(be_edge_index == 0)
@@ -455,14 +552,20 @@ MoveList find_road_with_angle(int st_x, int st_y, int ed_x, int ed_y, short curA
         ed_edge_index = findNearsetEdgeIndex(ed_x, ed_y);
     if(ed_edge_index == 0)
         printf("Error! cannot find road in (%d, %d) ", ed_x, ed_y);
-
-		int s1 = getNearestPoint(st_x, st_y, be_edge_index), s2 = e_be[ed_edge_index - 1];
+#ifdef TEST_TIME
+    printf("after find edge index use time %lf s \n", 1.0 * (clock() - begin_t) / CLOCKS_PER_SEC);
+#endif
+    int s1 = getNearestPoint(st_x, st_y, be_edge_index), s2 = e_be[ed_edge_index - 1];
 #ifdef PRINT_INFO
-		printf("be_edge_index %d ed_edge_index %d s1 index %d, s2 index %d \n", be_edge_index, ed_edge_index, s1, s2);
+    printf("be_edge_index %d ed_edge_index %d s1 index %d, s2 index %d \n", be_edge_index, ed_edge_index, s1, s2);
+#endif
+#ifdef TEST_TIME
+    printf("after choose s1 s2 use time %lf s \n", 1.0 * (clock() - begin_t) / CLOCKS_PER_SEC);
 #endif
     int haveFirstMove = 0, haveLastMove = 0;
     short angle1, angle2;
-    MoveList moveList;
+    PosList posList;
+    /*
     if(curAngle < 0) {
         if (getDis(st_x, st_y, points_x[e_be[be_edge_index - 1] - 1], points_y[e_be[be_edge_index - 1] - 1]) <
             getDis(st_x, st_y, points_x[e_ed[be_edge_index - 1] - 1], points_y[e_ed[be_edge_index - 1] - 1]))
@@ -470,60 +573,150 @@ MoveList find_road_with_angle(int st_x, int st_y, int ed_x, int ed_y, short curA
         else angle1 = points_angle[e_ed[be_edge_index - 1] - 1];
     }
     else angle1 = curAngle;
+
     if(getDis(ed_x, ed_y, points_x[e_be[ed_edge_index - 1] - 1], points_y[e_be[ed_edge_index - 1] - 1]) < getDis(ed_x, ed_y, points_x[e_ed[ed_edge_index - 1] - 1], points_y[e_ed[ed_edge_index - 1] - 1]))
         angle2 = points_angle[e_be[ed_edge_index - 1] - 1];
     else angle2 = points_angle[e_ed[ed_edge_index - 1] - 1];
+     */
     if(be_edge_index == ed_edge_index || getDis(st_x, st_y, ed_x, ed_y) <= MIN_DIS) {
 #ifdef PRINT_INFO
-				printf("prepare to get only car Move from (%d, %d) to (%d, %d) ", st_x, st_y, ed_x, ed_y);
+        printf("prepare to get only car Move from (%d, %d) to (%d, %d) ", st_x, st_y, ed_x, ed_y);
 #endif
-				CarMove onlyMove = coreGetCarMove(st_x, st_y, ed_x, ed_y, angle1, angle2);
-        moveList = initMoveList(1);
-        moveList.data[0] = onlyMove;
+        //CarMove onlyMove = coreGetCarMove(st_x, st_y, ed_x, ed_y, angle1, angle1);
+        posList = initPosList(1);
+        posList.data[0] = getPos(ed_x, ed_y);
+        //moveList = initMoveList(1);
+        //moveList.data[0] = onlyMove;
     }
     else {
-        CarMove firstMove, lastMove;
+        //CarMove firstMove, lastMove;
+        //RealEdge firstEdge, lastEdge;
+        MapPos firstPos, lastPos;
         if (getDis(st_x, st_y, points_x[s1 - 1], points_y[s1 - 1]) > 5) {
             haveFirstMove = 1;
 #ifdef PRINT_INFO
-				printf("prepare to get first car Move from (%d, %d) to (%d, %d) ", st_x, st_y, points_x[s1 - 1], points_y[s1 - 1]);
-#endif					
-            firstMove = coreGetCarMove(st_x, st_y, points_x[s1 - 1], points_y[s1 - 1], angle1, points_angle[s1 - 1]);
+            printf("prepare to get first car Move from (%d, %d) to (%d, %d) ", st_x, st_y, points_x[s1 - 1], points_y[s1 - 1]);
+#endif
+            firstPos = getPosFromIndex(s1);
+            //firstEdge = getRealEdge(st_x, st_y, points_x[s1 - 1], points_y[s1 - 1]);
+            //firstMove = coreGetCarMove(st_x, st_y, points_x[s1 - 1], points_y[s1 - 1], angle1, points_angle[s1 - 1]);
         }
         if (getDis(ed_x, ed_y, points_x[s2 - 1], points_y[s2 - 1]) > 5) {
             haveLastMove = 1;
 #ifdef PRINT_INFO
-				printf("prepare to get last car Move from (%d, %d) to (%d, %d) ", points_x[s2 - 1], points_y[s2 - 1], ed_x, ed_y);
+            printf("prepare to get last car Move from (%d, %d) to (%d, %d) ", points_x[s2 - 1], points_y[s2 - 1], ed_x, ed_y);
 #endif
-            lastMove = coreGetCarMove(points_x[s2 - 1], points_y[s2 - 1], ed_x, ed_y, points_angle[s2 - 1], angle2);
+            lastPos = getPos(ed_x, ed_y);
+            //lastEdge = getRealEdge(points_x[s2 - 1], points_y[s2 - 1], ed_x, ed_y);
+            //lastMove = coreGetCarMove(points_x[s2 - 1], points_y[s2 - 1], ed_x, ed_y, points_angle[s2 - 1], angle2);
         }
 #ifdef PRINT_INFO
         printf("prepare dijkstra \n");
 #endif
+#ifdef TEST_TIME
+        clock_t dij_t1 = clock();
+        double bef_dij_dur = 1.0 * (dij_t1 - begin_t) / CLOCKS_PER_SEC;
+        printf("before dijkstra use time %lf s \n", bef_dij_dur);
+#endif
         EdgeList edgeList = dijkstra(s1, s2);
-#ifdef PRINT_INFO
-        printf("prepare to init MoveList \n");
+#ifdef TEST_TIME
+        clock_t dij_t2 = clock();
+        double dij_dur = 1.0*(dij_t2 - dij_t1)/CLOCKS_PER_SEC;
+        double aft_dij_dur = 1.0 * (dij_t2 - begin_t) / CLOCKS_PER_SEC;
+        printf("dij use time %lf s \n", dij_dur);
+        printf("after dij use time %lf s \n", aft_dij_dur);
+
 #endif
-        moveList = initMoveList(edgeList.num + haveFirstMove + haveLastMove);
+
 #ifdef PRINT_INFO
-        printf("after initMoveList \n");
+        printf("prepare to init PosList \n");
 #endif
-        if (haveFirstMove == 1)
-            moveList.data[0] = firstMove;
-        if (haveLastMove == 1)
-            moveList.data[moveList.num - 1] = lastMove;
+        posList = initPosList(edgeList.num + haveFirstMove + haveLastMove);
+#ifdef PRINT_INFO
+        printf("after initPosList \n");
+#endif
+
+        if (haveFirstMove == 1) {
+           posList.data[0] = firstPos;
+            //RealEdge tempEdge = getRealEdge(points_x[edgeList.data[0].a], points_y[edgeList.data[0].a], points_x[edgeList.data[0].b], points_y[edgeList.data[0].b]);
+            //moveList.data[0] = getMoveFromEdges(&firstEdge, &tempEdge);
+        }
+        if (haveLastMove == 1) {
+            posList.data[posList.num - 1] = lastPos;
+            //wholeEdgeList.data[wholeEdgeList.num - 1] = lastEdge;
+            //RealEdge tempEdge = getRealEdge(points_x[edgeList.data[edgeList.num - 1].a], points_y[edgeList.data[edgeList.num - 1].a], points_x[edgeList.data[edgeList.num - 1].b], points_y[edgeList.data[edgeList.num - 1].b]);
+            //moveList.data[moveList.num - 1] = getMoveFromEdges(&tempEdge, &lastEdge);
+        }
         for (int i = 0; i < edgeList.num; ++i) {
-            moveList.data[i + haveFirstMove] = getCarMoveFromPoints(edgeList.data[i].a, edgeList.data[i].b);
+            posList.data[haveFirstMove + i] = getPosFromIndex(edgeList.data [i].b);
+            //wholeEdgeList.data[haveFirstMove + i] = getRealEdgeFromEdge(edgeList.data + i);
+            //RealEdge edge1 = getRealEdgeFromEdge(edgeList.data + i);
+            //RealEdge edge2 = getRealEdgeFromEdge(edgeList.data + i + 1);
+            //moveList.data[i + haveFirstMove] = getMoveFromEdges(&edge1, &edge2);
         }
 #ifdef PRINT_INFO
         printf("before delete EdgeList \n");
 #endif
         deleteEdgeList(&edgeList);
+
+#ifdef TEST_TIME
+        clock_t after_move_t = clock();
+        double aft_move_dur = 1.0 * (after_move_t - begin_t) / CLOCKS_PER_SEC;
+        printf("after get move list use time %lf s \n", aft_move_dur);
+#endif
     }
 
-    return moveList;
+    return posList;
 }
 
+
+
+
+
+PosList get_posList_with_angle(int st_x, int st_y, int ed_x, int ed_y, short curAngle)
+{
+#ifdef PRINT_INFO
+    printf("begin get_next_move_list \n");
+#endif
+    PosList posList = find_road_with_angle(st_x, st_y, ed_x, ed_y, curAngle);
+    return posList;
+}
+
+PosList GetPosListWithAngle(MessageInfo info, short curAngle)
+{
+#ifdef PRINT_INFO
+    printf("begin getNextMove\n");
+#endif
+    int onCarPass = -1, oppoHasPass = -1;
+    for(int i = 0; i < info.passengerNum; ++i) {
+        if(info.pass_status[i] == 1) {
+            onCarPass = i;
+        }
+        else if(info.pass_status[i] == 2)
+            oppoHasPass = i;
+    }
+    if(onCarPass != -1) {
+        return get_posList_with_angle(info.my_x, info.my_y, info.xe_pos[onCarPass], info.ye_pos[onCarPass], curAngle);
+    }
+    else {
+        short minDis = SHORT_INF;
+        int targetPass = 0;
+        for(int i = 0; i < info.passengerNum; ++i) {
+            short dis1 = getDis(info.my_x, info.my_y, info.xs_pos[i], info.ys_pos[i]);
+            if(info.pass_status[i] == 0 && dis1 < minDis) {
+                if(oppoHasPass != -1 || dis1 <= getDis(info.oppo_x, info.oppo_y, info.xs_pos[i], info.ys_pos[i])) {
+                    minDis = dis1;
+                    targetPass = i;
+                }
+            }
+        }
+#ifdef PRINT_INFO
+        printf("before get_next_move \n");
+#endif
+        return get_posList_with_angle(info.my_x, info.my_y, info.xs_pos[targetPass], info.ys_pos[targetPass], curAngle);
+
+    }
+}
 
 void print_move_list(MoveList moveList)
 {
@@ -534,10 +727,19 @@ void print_move_list(MoveList moveList)
     }
 }
 
+void print_pos_list(PosList posList)
+{
+    for(int i = 0; i < posList.num; ++i) {
+        printf("pos (%d, %d) \n", posList.data[i].x, posList.data[i].y);
+    }
+
+}
+
+
 CarMove get_next_move(int st_x, int st_y, int ed_x, int ed_y)
 {
 #ifdef PRINT_INFO
-		printf("begin get_next_move \n");
+    printf("begin get_next_move \n");
 #endif
     MoveList moveList = find_road(st_x, st_y, ed_x, ed_y);
 #ifdef PRINT_INFO
@@ -549,7 +751,7 @@ CarMove get_next_move(int st_x, int st_y, int ed_x, int ed_y)
         CarMove carMove = moveList.data[0];
         deleteMoveList(&moveList);
 #ifdef PRINT_INFO
-			printf("after delete moveList \n");
+        printf("after delete moveList \n");
 #endif
         return carMove;
     }
@@ -568,9 +770,9 @@ CarMove get_next_move(int st_x, int st_y, int ed_x, int ed_y)
 
 CarMove GetNextMove(MessageInfo info)
 {
-		#ifdef PRINT_INFO
-			printf("begin getNextMove\n");
-		#endif
+#ifdef PRINT_INFO
+    printf("begin getNextMove\n");
+#endif
     int onCarPass = -1, oppoHasPass = -1;
     for(int i = 0; i < info.passengerNum; ++i) {
         if(info.pass_status[i] == 1) {
@@ -600,126 +802,102 @@ CarMove GetNextMove(MessageInfo info)
             }
         }
 #ifdef PRINT_INFO
-				printf("before get_next_move \n");
+        printf("before get_next_move \n");
 #endif
         return get_next_move(info.my_x, info.my_y, info.xs_pos[targetPass], info.ys_pos[targetPass]);
 
     }
 }
 
-CarMove GetNextMoveWithAngle(MessageInfo info, short curAngle)
-{
-#ifdef PRINT_INFO
-    printf("begin getNextMove\n");
-#endif
-    int onCarPass = -1, oppoHasPass = -1;
-    for(int i = 0; i < info.passengerNum; ++i) {
-        if(info.pass_status[i] == 1) {
-            onCarPass = i;
-        }
-        else if(info.pass_status[i] == 2)
-            oppoHasPass = i;
-    }
-    if(onCarPass != -1) {
-        return get_next_move_with_angle(info.my_x, info.my_y, info.xe_pos[onCarPass], info.ye_pos[onCarPass], curAngle);
-    }
-    else {
-        short minDis = SHORT_INF;
-        int targetPass = 0;
-        for(int i = 0; i < info.passengerNum; ++i) {
-            short dis1 = getDis(info.my_x, info.my_y, info.xs_pos[i], info.ys_pos[i]);
-            if(info.pass_status[i] == 0 && dis1 < minDis) {
-                if(oppoHasPass != -1 || dis1 <= getDis(info.oppo_x, info.oppo_y, info.xs_pos[i], info.ys_pos[i])) {
-                    minDis = dis1;
-                    targetPass = i;
-                }
-            }
-        }
-#ifdef PRINT_INFO
-        printf("before get_next_move \n");
-#endif
-        return get_next_move_with_angle(info.my_x, info.my_y, info.xs_pos[targetPass], info.ys_pos[targetPass], curAngle);
-
-    }
-}
-
-MoveList get_moveList_with_angle(int st_x, int st_y, int ed_x, int ed_y, short curAngle)
-{
-#ifdef PRINT_INFO
-    printf("begin get_next_move_list \n");
-#endif
-    MoveList moveList = find_road_with_angle(st_x, st_y, ed_x, ed_y, curAngle);
-    return moveList;
-}
-
-MoveList GetMoveListWithAngle(MessageInfo info, short curAngle)
-{
-#ifdef PRINT_INFO
-    printf("begin getNextMove\n");
-#endif
-    int onCarPass = -1, oppoHasPass = -1;
-    for(int i = 0; i < info.passengerNum; ++i) {
-        if(info.pass_status[i] == 1) {
-            onCarPass = i;
-        }
-        else if(info.pass_status[i] == 2)
-            oppoHasPass = i;
-    }
-    if(onCarPass != -1) {
-        return get_moveList_with_angle(info.my_x, info.my_y, info.xe_pos[onCarPass], info.ye_pos[onCarPass], curAngle);
-    }
-    else {
-        short minDis = SHORT_INF;
-        int targetPass = 0;
-        for(int i = 0; i < info.passengerNum; ++i) {
-            short dis1 = getDis(info.my_x, info.my_y, info.xs_pos[i], info.ys_pos[i]);
-            if(info.pass_status[i] == 0 && dis1 < minDis) {
-                if(oppoHasPass != -1 || dis1 <= getDis(info.oppo_x, info.oppo_y, info.xs_pos[i], info.ys_pos[i])) {
-                    minDis = dis1;
-                    targetPass = i;
-                }
-            }
-        }
-#ifdef PRINT_INFO
-        printf("before get_next_move \n");
-#endif
-        return get_moveList_with_angle(info.my_x, info.my_y, info.xs_pos[targetPass], info.ys_pos[targetPass], curAngle);
-
-    }
-}
-
-
-CarMove get_next_move_with_angle(int st_x, int st_y, int ed_x, int ed_y, short curAngle)
+MapPos get_next_pos_with_angle(int st_x, int st_y, int ed_x, int ed_y, short curAngle)
 {
 #ifdef PRINT_INFO
     printf("begin get_next_move \n");
 #endif
-    MoveList moveList = find_road_with_angle(st_x, st_y, ed_x, ed_y, curAngle);
+#ifdef TEST_TIME
+    printf("before find_road use time %lf s \n", 1.0 * (clock() - begin_t) / CLOCKS_PER_SEC);
+#endif
+    PosList posList = find_road_with_angle(st_x, st_y, ed_x, ed_y, curAngle);
+#ifdef TEST_TIME
+    printf("after find_road use time %lf s \n", 1.0 * (clock() - begin_t) / CLOCKS_PER_SEC);
+#endif
 #ifdef PRINT_INFO
     print_move_list(moveList);
     printf("after find_road \n");
+#ifdef TEST_TIME
+    printf("after print moveList use time %lf s \n", 1.0 * (clock() - begin_t) / CLOCKS_PER_SEC);
+#endif
 #endif
 
-    if(moveList.num > 0) {
-        CarMove carMove = moveList.data[0];
-        deleteMoveList(&moveList);
+
+    if(posList.num > 0) {
+        MapPos mapPos = posList.data[0];
+        deleteMoveList(&posList);
 #ifdef PRINT_INFO
         printf("after delete moveList \n");
 #endif
-        return carMove;
+#ifdef TEST_TIME
+        clock_t after_de_t = clock();
+        double after_de_dur = 1.0 * (after_de_t - begin_t) / CLOCKS_PER_SEC;
+        printf("after delete moveList use time %lf s \n", after_de_dur);
+#endif
+
+        return mapPos;
     }
     else {
-        CarMove carMove;
-        carMove.type = 0;
-        carMove.dis = 0;
-        carMove.angle = 0;
-        carMove.dest_x = st_x;
-        carMove.dest_y = st_y;
-        carMove.start_x = st_x;
-        carMove.start_y = st_y;
-        return carMove;
+        MapPos mapPos;
+        mapPos.x = ed_x;
+        mapPos.y = ed_y;
+        return mapPos;
     }
 }
+
+MapPos GetNextPosWithAngle(MessageInfo info, short curAngle)
+{
+#ifdef PRINT_INFO
+    printf("begin getNextMove\n");
+#endif
+#ifdef TEST_TIME
+    begin_t = clock();
+#endif
+    int onCarPass = -1, oppoHasPass = -1;
+    for(int i = 0; i < info.passengerNum; ++i) {
+        if(info.pass_status[i] == 1) {
+            onCarPass = i;
+        }
+        else if(info.pass_status[i] == 2)
+            oppoHasPass = i;
+    }
+    if(onCarPass != -1) {
+        return get_next_pos_with_angle(info.my_x, info.my_y, info.xe_pos[onCarPass], info.ye_pos[onCarPass], curAngle);
+    }
+    else {
+        short minDis = SHORT_INF;
+        int targetPass = 0;
+        for(int i = 0; i < info.passengerNum; ++i) {
+            short dis1 = getDis(info.my_x, info.my_y, info.xs_pos[i], info.ys_pos[i]);
+            if(info.pass_status[i] == 0 && dis1 < minDis) {
+                if(oppoHasPass != -1 || dis1 <= getDis(info.oppo_x, info.oppo_y, info.xs_pos[i], info.ys_pos[i])) {
+                    minDis = dis1;
+                    targetPass = i;
+                }
+            }
+        }
+
+#ifdef PRINT_INFO
+        printf("before get_next_move \n");
+#endif
+#ifdef TEST_TIME
+        clock_t after_select_t = clock();
+        double sel_dur = 1.0*(after_select_t - begin_t) / CLOCKS_PER_SEC;
+        printf("after select target use %lf s \n", sel_dur);
+#endif
+        return get_next_pos_with_angle(info.my_x, info.my_y, info.xs_pos[targetPass], info.ys_pos[targetPass], curAngle);
+
+    }
+}
+
+
 
 
 #ifdef DEBUG_MODE
