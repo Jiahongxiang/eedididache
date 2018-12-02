@@ -365,7 +365,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;..\Car-Pilot-master</IncludePath>
+              <IncludePath>../Inc;     ../Drivers/STM32F1xx_HAL_Driver/Inc;     ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;     ../Drivers/CMSIS/Device/ST/STM32F1xx/Include;     ../Drivers/CMSIS/Include;     ..\Car-Pilot-master</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -530,6 +530,26 @@
               <FileName>utils.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Car-Pilot-master\utils.h</FilePath>
+            </File>
+            <File>
+              <FileName>index_map.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Car-Pilot-master\index_map.c</FilePath>
+            </File>
+            <File>
+              <FileName>FindRoad.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Car-Pilot-master\FindRoad.h</FilePath>
+            </File>
+            <File>
+              <FileName>index_map.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Car-Pilot-master\index_map.h</FilePath>
+            </File>
+            <File>
+              <FileName>FindRoad.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Car-Pilot-master\FindRoad.c</FilePath>
             </File>
           </Files>
         </Group>

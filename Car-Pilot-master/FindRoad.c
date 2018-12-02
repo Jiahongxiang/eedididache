@@ -522,7 +522,7 @@ CarMove getMoveFromEdges(RealEdge *edge1, RealEdge *edge2)
     int x1 = edge1->x2 - edge1->x1, x2 = edge2->x2 - edge2->x1;
     int y1 = edge1->y2 - edge1->y1, y2 = edge2->y2 - edge2->y1;
     int cross = x1 * y2 - x2 * y1;
-    float angle = -asinf(cross / getLength(x1, y1) / getLength(x2, y2)) * 180.0f / (float)M_PI;
+    float angle = -asinf(cross / getLength(x1, y1) / getLength(x2, y2)) * 180.0f / (float)MY_PI;
     CarMove carMove;
     carMove.start_x = edge1->x2, carMove.start_y = edge1->y2;
     carMove.dest_x = edge1->x2, carMove.dest_y = edge1->y2;
@@ -689,6 +689,9 @@ PosList GetPosListWithAngle(MessageInfo info, short curAngle)
 #endif
     int onCarPass = -1, oppoHasPass = -1;
     for(int i = 0; i < info.passengerNum; ++i) {
+#ifdef PRINT_INFO2
+				printf("passenger %d status %d", i + 1, info.pass_status[i]);
+#endif
         if(info.pass_status[i] == 1) {
             onCarPass = i;
         }
@@ -696,6 +699,9 @@ PosList GetPosListWithAngle(MessageInfo info, short curAngle)
             oppoHasPass = i;
     }
     if(onCarPass != -1) {
+#ifdef PRINT_INFO2
+				printf("going to dest of %d", onCarPass);
+#endif			
         return get_posList_with_angle(info.my_x, info.my_y, info.xe_pos[onCarPass], info.ye_pos[onCarPass], curAngle);
     }
     else {
@@ -832,7 +838,7 @@ MapPos get_next_pos_with_angle(int st_x, int st_y, int ed_x, int ed_y, short cur
 
     if(posList.num > 0) {
         MapPos mapPos = posList.data[0];
-        deleteMoveList(&posList);
+        deletePosList(&posList);
 #ifdef PRINT_INFO
         printf("after delete moveList \n");
 #endif

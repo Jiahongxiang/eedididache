@@ -8,6 +8,7 @@
 //#define DEBUG_MODE
 //#define PRINT_INFO
 //#define TEST_TIME
+#define PRINT_INFO2
 
 #ifdef TEST_TIME
 #include <time.h>

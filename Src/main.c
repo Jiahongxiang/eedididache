@@ -74,16 +74,14 @@ volatile uint8_t refreshed=0;
 //read BT
 uint8_t btreceive[1];
 volatile uint8_t bluetooth=0;
-//read pi
-uint8_t pitext[5];
-volatile uint8_t pirefreshed=0;
 //timer for 6050
 volatile uint8_t TimeUp=0;
 //findroad result
+int routestep;
 int currentstep;
 int destx,desty;
 //current situation
-double current_angle=90;
+double current_angle=180;
 uint8_t isA;
 uint8_t fre=10;  
 volatile int leftspeed=0,rightspeed=0;
@@ -91,7 +89,7 @@ int idlespeed=0;
 float lefterror[3]={0,0,0},righterror[3]={0,0,0};
 int leftpwm=0,rightpwm=0;
 float lastdis,thisdis=1000;
-int reachsituation=1;
+int reachsituation=0;
 int lastx=0,lasty=0;
 int thisx=0,thisy=0;
 /* USER CODE END PV */
@@ -117,6 +115,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 //////////////////////////////////////////////////////////////////////////////////* USER CODE BEGIN PFP */
+
 double turntoangle(int thisx,int thisy,int lastx,int lasty){
 	if(thisx == lastx){
 		if(thisy>lasty) return 90;
@@ -136,7 +135,7 @@ double turntoangle(int thisx,int thisy,int lastx,int lasty){
 }
 
 void go(int l,int r){
-	if(r>=0){
+	if(r>0){
 		__HAL_TIM_SET_COMPARE(&htim3,TIM_CHANNEL_3,r);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_0,GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_1,GPIO_PIN_SET);
@@ -144,29 +143,45 @@ void go(int l,int r){
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_2,GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_3,GPIO_PIN_SET);
 	}
-	else{
+	else if(r<0){
 		__HAL_TIM_SET_COMPARE(&htim3,TIM_CHANNEL_3,-r);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_0,GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_1,GPIO_PIN_RESET);
 		__HAL_TIM_SET_COMPARE(&htim3,TIM_CHANNEL_4,-r);
-		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_2,GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_3,GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_2,GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_3,GPIO_PIN_RESET);
 	}
-	if(l>=0){
-		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,l);
+	else if(r==0){
+		__HAL_TIM_SET_COMPARE(&htim3,TIM_CHANNEL_3,-r);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_0,GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_1,GPIO_PIN_RESET);
+		__HAL_TIM_SET_COMPARE(&htim3,TIM_CHANNEL_4,-r);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_2,GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_3,GPIO_PIN_RESET);
+	}
+	if(l>0){
+		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_1,l);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_6,GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_7,GPIO_PIN_SET);
 		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,l);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_8,GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_9,GPIO_PIN_SET);
 	}
-	else{
-		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,-l);
+	else if(l<0){
+		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_1,-l);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_6,GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_7,GPIO_PIN_RESET);
 		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,-l);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_8,GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_9,GPIO_PIN_RESET);
+	}
+	else if(l==0){
+		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_1,-l);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_6,GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_7,GPIO_PIN_RESET);
+		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,-l);
 		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_8,GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_9,GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOC,GPIO_PIN_9,GPIO_PIN_RESET);
 	}
 }
 
@@ -246,6 +261,70 @@ void InitMPU6050()
 	printf("offset:%f",gyro_z_offset);
 }
 /*-----MPU Part end-----*/
+
+double __angle;
+//turning left
+void turnleft(double destangle){
+	destangle-=1.5;
+	//-----code changed-----
+	//printf("turning left %f\n",destangle);
+	go(-80,80);
+	double tempangle=0;
+	while(tempangle<=0.5*destangle && tempangle>=-0.5*destangle){
+		if (TimeUp==1){
+			data=Get_MPU_Data(GYRO_ZOUT_H);
+			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
+			tempangle+=angle_speed*0.01;
+			__angle+=angle_speed*0.01;
+			TimeUp=0;
+		}
+	}
+	go(-75,75);
+	while(tempangle<=destangle && tempangle>=-1*destangle){
+		if (TimeUp==1){
+			data=Get_MPU_Data(GYRO_ZOUT_H);
+			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
+			tempangle+=angle_speed*0.01;
+			__angle+=angle_speed*0.01;
+			//printf("%lf;%f\n",tempangle,angle_speed);
+			TimeUp=0;
+		}
+	}
+	go(80,-80);
+	HAL_Delay(10);
+	go(0,0);
+}
+
+void turnright(double destangle){
+	destangle-=1.5;
+	//-----code changed-----
+	//printf("turning right %f\n",destangle);
+	go(80,-80);
+	double tempangle=0;
+	while(tempangle<=0.5*destangle && tempangle>=-0.5*destangle){
+		if (TimeUp==1){
+			data=Get_MPU_Data(GYRO_ZOUT_H);
+			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
+			tempangle+=angle_speed*0.01;
+			
+			TimeUp=0;
+			//printf("angle=%lf\n",tempangle);
+		}
+	}
+	go(75,-75);
+	while(tempangle<=destangle && tempangle>=-1*destangle){
+		if (TimeUp==1){
+			data=Get_MPU_Data(GYRO_ZOUT_H);
+			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
+			tempangle+=angle_speed*0.01;
+			//printf("%lf;%f\n",tempangle,angle_speed);
+			TimeUp=0;
+		}
+	}
+	go(-80,80);
+	HAL_Delay(10);
+	go(0,0);
+}
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -298,12 +377,12 @@ int main(void)
 	setInitHandle(&huart3);
 	uint8_t a[]="--Starting Initializing--\r\n";
 	printf("%s",a); 
-	//HAL_UART_Receive_IT(&huart1,pitext,4);
 	InitMPU6050();
 	printf("mpu6050 initializd");
-	uint8_t isA=(HAL_GPIO_ReadPin(GPIOD,GPIO_PIN_2)?1:0);
-	if(isA==1) current_angle=90;
-	else current_angle=270;
+	uint8_t isA=(HAL_GPIO_ReadPin(GPIOD,GPIO_PIN_2)?0:1);
+	isA=1;
+	current_angle=270;
+	
 	
 	printf("AT\r\n");
 	HAL_UART_Transmit(&huart2,"AT\r\n",4,100);
@@ -321,43 +400,82 @@ int main(void)
 	HAL_UART_Transmit(&huart2,"AT+CWJAP=\"EDC20\",\"12345678\"\r\n",30,100);
 	HAL_Delay(5000);
 
-	printf("AT+CIPSTART=\"TCP\",\"192.168.1.134\",20000\r\n");
-	HAL_UART_Transmit(&huart2,"AT+CIPSTART=\"TCP\",\"192.168.1.134\",20000\r\n",41,100);
+	printf("AT+CIPSTART=\"TCP\",\"192.168.1.100\",20000\r\n");
+	HAL_UART_Transmit(&huart2,"AT+CIPSTART=\"TCP\",\"192.168.1.100\",20000\r\n",41,100);
 	HAL_Delay(2000);
 	
-  HAL_TIM_Base_Start_IT(&htim1);
+	
+	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_TIM_Base_Start_IT(&htim8);
 	HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
 	HAL_TIM_Encoder_Start(&htim5, TIM_CHANNEL_ALL);
-	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
 	HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim3,TIM_CHANNEL_4);
 	HAL_UART_Receive_IT(&huart2,receive,1);
 	HAL_UART_Receive_IT(&huart3,btreceive,1);
-	
 	MessageInfo* message=(MessageInfo*)malloc(sizeof(MessageInfo));
+	//initialize position
+	PosList route;
 	while(1){
 		if (refreshed==1){			
 			msgrefresh((char*)rawtext,message,isA);
 			printf("isA=%d",isA);
-			printf("\nmy_x=%d my_y=%d oppo_x=%d oppo_y=%d passengerNum=%d\n",
-			message->my_x,message->my_y,message->oppo_x,message->oppo_y,message->passengerNum);
-			for (int i=0;i<message->passengerNum;i++){
-				printf("pass_status=%hhd xs_pos=%d ys_pos=%d xe_pos=%d ye_pos=%d\n",
-				message->pass_status[i],message->xs_pos[i],message->ys_pos[i],message->xe_pos[i],message->ye_pos[i]);
-			}
+			printf("\nmy_x=%d my_y=%d passengerNum=%d\n",
+			message->my_x,message->my_y,message->passengerNum);
 			thisx=message->my_x;
 			thisy=message->my_y;
 			thisdis=sqrt((message->my_x-destx)*(message->my_x-destx)*1.0+(message->my_y-desty)*(message->my_y-desty)*1.0);
 			refreshed=0;
-			printf("initialization finished");
+			route=GetPosListWithAngle(*message, 0);
+			//
+			print_pos_list(route);
 			break;
 		}
 	}
+	
+	printf("initialization finished\n");
+	int reachsituation=0;
+	/*
+	int testroute[36]={68,185,30,185,35,235,69,240,105,205,141,169,169,141,240,69,240,40,230,30,185,30,125,30,90,50,84,71,71,84,50,90,30,25,30,185};
+	routestep=18;
+	currentstep=0;
+	currentstep++;
+	destx=testroute[currentstep*2];
+	desty=testroute[currentstep*2+1];
+	printf("destx=%d,desty=%d\n",destx,desty);
+	*/
+	currentstep=0;
+	destx=route.data[currentstep].x;
+	desty=route.data[currentstep].y;
+	
+	
   /* USER CODE END 2 */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	/*
+	__angle=0.0;
+		while(1)
+	{
+		turnleft(88.5);
+		int i=0;
+		while(1)
+		{
+			if (TimeUp==1){
+			data=Get_MPU_Data(GYRO_ZOUT_H);
+			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
+			__angle+=angle_speed*0.01;
+			TimeUp=0;
+			i++;
+			}
+			if(i%50==0) printf("%lf;%f\n",__angle,angle_speed);
+			if(200==i)break;
+		}
+	}
+	*/
+		
   while (1)
   {
 
@@ -367,27 +485,43 @@ int main(void)
 //////////////////////////////////////////////////////////////////////////////////* USER CODE BEGIN 3 */
 		if (refreshed==1){			
 			msgrefresh((char*)rawtext,message,isA);
-			printf("isA=%d",isA);
-			printf("\nmy_x=%d my_y=%d oppo_x=%d oppo_y=%d passengerNum=%d\n",
-			message->my_x,message->my_y,message->oppo_x,message->oppo_y,message->passengerNum);
+			//printf("isA=%d",isA);
+			//printf("\nmy_x=%d my_y=%d passengerNum=%d\n",
+			//message->my_x,message->my_y,message->passengerNum);
+			/*
 			for (int i=0;i<message->passengerNum;i++){
 				printf("pass_status=%hhd xs_pos=%d ys_pos=%d xe_pos=%d ye_pos=%d\n",
 				message->pass_status[i],message->xs_pos[i],message->ys_pos[i],message->xe_pos[i],message->ye_pos[i]);
 			}
+			*/
 			refreshed=0;
 			//go straight
 			if(reachsituation==0){
-				go(90,90);
+				go(50,50);
 				lastdis=thisdis;
 				thisdis=sqrt((message->my_x-destx)*(message->my_x-destx)*1.0+(message->my_y-desty)*(message->my_y-desty)*1.0);
-				if(lastdis<thisdis){
-					reachsituation=1;
+				//printf("dis=%f\n",thisdis);
+				if(lastdis<thisdis && thisdis<10){
 					go(0,0);
-					HAL_Delay(300);
+					//printf("reach dest:%d,%d\n",destx,desty);
+					reachsituation=1;
+					currentstep++;
+					if(currentstep<route.num){			
+						destx=route.data[currentstep].x;
+						desty=route.data[currentstep].y;
+					}
+					else{
+						deletePosList(&route);
+						route = GetPosListWithAngle(*message, 0);
+						print_pos_list(route);
+						currentstep=0;
+					}
+					//printf("next dest:%d,%d\n",destx,desty);
+					HAL_Delay(500);
 				}
 				else{
-					//***pid go straight***
-					go(90,90);
+					//printf("going\n");
+					go(50,50); //go straight ***pid***
 				}
 			}
 			//turning
@@ -400,38 +534,29 @@ int main(void)
 				current_angle=turntoangle(thisx,thisy,lastx,lasty);
 				double destangle=turntoangle(destx,desty,thisx,thisy);
 				destangle=destangle-current_angle;
+				if(destangle>180) destangle-=360;
+				if(destangle<-180) destangle+=360;
+				//printf("turn left:%f\n",destangle);
 				if(destangle>0){
-					go(-50,50);//turning left
-					float tempangle=0;
-					while(tempangle<=destangle && tempangle>=-1*destangle){
-						if (TimeUp==0) continue;
-						TimeUp=0;
-						data=Get_MPU_Data(GYRO_ZOUT_H);
-						angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
-						tempangle+=tempangle*0.01;
-					}
-					//turning finished
-					go(0,0);
+					//if(destangle<60)
+					turnleft(destangle);
 				}
 				else{
-					go(50,-50);
-					float tempangle=0;
-					while(tempangle<=-1*destangle && tempangle>=destangle){
-						if (TimeUp==0) continue;
-						TimeUp=0;
-						data=Get_MPU_Data(GYRO_ZOUT_H);
-						angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
-						tempangle+=tempangle*0.01;
-					}
-					//mpu turning finished
-					go(0,0);
+					//if(destangle>-60)
+					turnright(-1*destangle);
 				}
+				go(0,0);
+				//printf("ready to go straight\n");
 				HAL_Delay(500);
+				//
+				go(50,50);
+				HAL_Delay(100);
+				//
 			}
-			
-		}//endif
-  }//endwhile
+		}//end if situation =1/0
+  }//end main while
   /* USER CODE END 3 */
+
 }
 
 /**
@@ -564,7 +689,7 @@ static void MX_TIM2_Init(void)
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -701,7 +826,7 @@ static void MX_TIM8_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig;
 
   htim8.Instance = TIM8;
-  htim8.Init.Prescaler = 799;
+  htim8.Init.Prescaler = 79;
   htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim8.Init.Period = 999;
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -831,7 +956,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		refreshed=1;
 		bluetooth=btreceive[0]-48;
 		printf("%d",bluetooth);
-		HAL_UART_Receive_IT(&huart3,receive,1);
+		HAL_UART_Receive_IT(&huart3,btreceive,1);
 	}
 	if (huart->Instance==USART2){
 		temptext[current]=receive[0];
@@ -846,8 +971,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		HAL_UART_Receive_IT(&huart2,receive,1);
 	}
 	if (huart->Instance==USART1){
-		pirefreshed=1;
-		HAL_UART_Receive_IT(&huart1,pitext,4);
 	}
 }
 
