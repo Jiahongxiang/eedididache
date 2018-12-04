@@ -690,7 +690,7 @@ PosList GetPosListWithAngle(MessageInfo info, short curAngle)
     int onCarPass = -1, oppoHasPass = -1;
     for(int i = 0; i < info.passengerNum; ++i) {
 #ifdef PRINT_INFO2
-				printf("passenger %d status %d", i + 1, info.pass_status[i]);
+				printf("pass %d status %d \n", i + 1, info.pass_status[i]);
 #endif
         if(info.pass_status[i] == 1) {
             onCarPass = i;

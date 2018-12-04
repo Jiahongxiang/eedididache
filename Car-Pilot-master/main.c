@@ -67,12 +67,12 @@ void testDecodeMessage()
 {
     MessageInfo msg;
     PosList posList;
-    msg.my_x = 41, msg.my_y = 12;
+    msg.my_x = 31, msg.my_y = 39;
     msg.oppo_x = 205, msg.oppo_y = 215;
     msg.passengerNum = 5;
     memset(msg.pass_status, 0, 7);
     msg.is_a = 1;
-    msg.pass_status[2] = 0;
+    msg.pass_status[3] = 1;
     msg.xs_pos[0] = 9, msg.ys_pos[0] = 163;
     msg.xe_pos[0] = 94, msg.ye_pos[0] = 83;
 
@@ -101,8 +101,8 @@ void testDecodeMessage()
         // msg.my_x = move.dest_x, msg.my_y = move.dest_y;
 #ifdef PRINT_TOTAL_TIME
         clock_t t2 = clock();
-        double dur_time = 1.0 * (t2 - t1)/CLOCKS_PER_SEC;
-        printf("use time %lf s \n", dur_time);
+        double dur_time = 1000.0 * (t2 - t1)/CLOCKS_PER_SEC;
+        printf("use time %lf ms \n", dur_time);
 #endif
         printf("\n");
         //printf("type %d dest_x %d dest_y %d angle %d move.dis %f\n", move.type,  move.dest_x, move.dest_y,  move.angle, move.dis);
