@@ -46,6 +46,9 @@
 #include "FindRoad.h"
 #include "decodemessage.h"
 #include "utils.h"
+
+#define DEBUG_TURN
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -268,29 +271,46 @@ void turnleft(double destangle){
 	destangle-=1.5;
 	//-----code changed-----
 	//printf("turning left %f\n",destangle);
+#ifdef DEBUG_TURN
+    go(-90,90);
+#else
 	go(-80,80);
+#endif
 	double tempangle=0;
 	while(tempangle<=0.5*destangle && tempangle>=-0.5*destangle){
 		if (TimeUp==1){
 			data=Get_MPU_Data(GYRO_ZOUT_H);
 			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
 			tempangle+=angle_speed*0.01;
+#ifdef DEBUG_TURN
 			__angle+=angle_speed*0.01;
+#endif
 			TimeUp=0;
 		}
 	}
+
+#ifdef DEBUG_TURN
+    go(-90,90);
+#else
 	go(-75,75);
+#endif
 	while(tempangle<=destangle && tempangle>=-1*destangle){
 		if (TimeUp==1){
 			data=Get_MPU_Data(GYRO_ZOUT_H);
 			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
 			tempangle+=angle_speed*0.01;
+#ifdef DEBUG_TURN
 			__angle+=angle_speed*0.01;
+#endif
 			//printf("%lf;%f\n",tempangle,angle_speed);
 			TimeUp=0;
 		}
 	}
-	go(80,-80);
+#ifdef DEBUG_TURN
+	go(90,-90);
+#else
+	go(80, -80);
+#endif
 	HAL_Delay(10);
 	go(0,0);
 }
@@ -382,7 +402,7 @@ int main(void)
 	uint8_t isA=(HAL_GPIO_ReadPin(GPIOD,GPIO_PIN_2)?0:1);
 	isA=1;
 	current_angle=270;
-	
+#ifndef DEBUG_TURN
 	
 	printf("AT\r\n");
 	HAL_UART_Transmit(&huart2,"AT\r\n",4,100);
@@ -403,7 +423,8 @@ int main(void)
 	printf("AT+CIPSTART=\"TCP\",\"192.168.1.105\",20000\r\n");
 	HAL_UART_Transmit(&huart2,"AT+CIPSTART=\"TCP\",\"192.168.1.105\",20000\r\n",41,100);
 	HAL_Delay(2000);
-	
+
+#endif
 	
 	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_TIM_Base_Start_IT(&htim8);
@@ -418,11 +439,29 @@ int main(void)
 	MessageInfo* message=(MessageInfo*)malloc(sizeof(MessageInfo));
 	//initialize position
 	PosList route;
-	/*
-	while(1){
-	go(75,-75);
-	}
-	*/
+
+
+#ifdef DEBUG_TURN
+    __angle=0.0;
+    while(1)
+    {
+        turnleft(88.5);
+        int i=0;
+        while(1)
+        {
+            if (TimeUp==1){
+                data=Get_MPU_Data(GYRO_ZOUT_H);
+                angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
+                __angle+=angle_speed*0.01;
+                TimeUp=0;
+                i++;
+            }
+            if(i%50==0) printf("%lf;%f\n",__angle,angle_speed);
+            if(200==i)break;
+        }
+    }
+#endif
+
 	while(1){
 		if (refreshed==1){			
 			msgrefresh((char*)rawtext,message,isA);
@@ -460,26 +499,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	/*
-	__angle=0.0;
-		while(1)
-	{
-		turnleft(88.5);
-		int i=0;
-		while(1)
-		{
-			if (TimeUp==1){
-			data=Get_MPU_Data(GYRO_ZOUT_H);
-			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
-			__angle+=angle_speed*0.01;
-			TimeUp=0;
-			i++;
-			}
-			if(i%50==0) printf("%lf;%f\n",__angle,angle_speed);
-			if(200==i)break;
-		}
-	}
-	*/
+
+
 		
   while (1)
   {
