@@ -47,9 +47,10 @@ void msgrefresh(char* b, struct _MessageInfo* msg, uint8_t who){
 //ncondition totalnumber(00 ??? 01A? 10B?)
     msg->passengerNum=(a[9]&252)/4;
     msg->pass_status[0]=a[9]&3;
-    msg->pass_status[1]=a[10]&(3<<6);
-    msg->pass_status[2]=a[10]&(3<<4);
-    msg->pass_status[3]=a[10]&(3<<2);
+    msg->pass_status[1]=(a[10]&(3<<6) ) >> 6;
+    msg->pass_status[2]=(a[10]&(3<<4)) >> 4;
+    msg->pass_status[3]=(a[10]&(3<<2)) >> 2;
     msg->pass_status[4]=a[10]&3;
+    msg->is_a = who;
 }
 

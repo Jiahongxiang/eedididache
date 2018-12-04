@@ -400,8 +400,8 @@ int main(void)
 	HAL_UART_Transmit(&huart2,"AT+CWJAP=\"EDC20\",\"12345678\"\r\n",30,100);
 	HAL_Delay(5000);
 
-	printf("AT+CIPSTART=\"TCP\",\"192.168.1.100\",20000\r\n");
-	HAL_UART_Transmit(&huart2,"AT+CIPSTART=\"TCP\",\"192.168.1.100\",20000\r\n",41,100);
+	printf("AT+CIPSTART=\"TCP\",\"192.168.1.105\",20000\r\n");
+	HAL_UART_Transmit(&huart2,"AT+CIPSTART=\"TCP\",\"192.168.1.105\",20000\r\n",41,100);
 	HAL_Delay(2000);
 	
 	
@@ -418,6 +418,11 @@ int main(void)
 	MessageInfo* message=(MessageInfo*)malloc(sizeof(MessageInfo));
 	//initialize position
 	PosList route;
+	/*
+	while(1){
+	go(75,-75);
+	}
+	*/
 	while(1){
 		if (refreshed==1){			
 			msgrefresh((char*)rawtext,message,isA);
@@ -515,6 +520,11 @@ int main(void)
 						route = GetPosListWithAngle(*message, 0);
 						print_pos_list(route);
 						currentstep=0;
+						thisdis = 1000;
+						if(route.num > 0) {
+							destx = route.data[0].x;
+							desty = route.data[0].y;
+						}
 					}
 					//printf("next dest:%d,%d\n",destx,desty);
 					HAL_Delay(500);

@@ -693,14 +693,19 @@ PosList GetPosListWithAngle(MessageInfo info, short curAngle)
 				printf("pass %d status %d \n", i + 1, info.pass_status[i]);
 #endif
         if(info.pass_status[i] == 1) {
-            onCarPass = i;
+            if(info.is_a)
+                onCarPass = i;
+            else oppoHasPass = i;
         }
-        else if(info.pass_status[i] == 2)
-            oppoHasPass = i;
+        else if(info.pass_status[i] == 2) {
+            if(info.is_a)
+                oppoHasPass = i;
+            else onCarPass = i;
+        }
     }
     if(onCarPass != -1) {
 #ifdef PRINT_INFO2
-				printf("going to dest of %d", onCarPass);
+				printf("going to dest of %d at (%d, %d) \n", onCarPass, info.xe_pos[onCarPass], info.ye_pos[onCarPass]);
 #endif			
         return get_posList_with_angle(info.my_x, info.my_y, info.xe_pos[onCarPass], info.ye_pos[onCarPass], curAngle);
     }
