@@ -439,6 +439,7 @@ int main(void)
 	MessageInfo* message=(MessageInfo*)malloc(sizeof(MessageInfo));
 	//initialize position
 	PosList route;
+	MapPos TargetPos;
 
 
 #ifdef DEBUG_TURN
@@ -473,6 +474,7 @@ int main(void)
 			thisdis=sqrt((message->my_x-destx)*(message->my_x-destx)*1.0+(message->my_y-desty)*(message->my_y-desty)*1.0);
 			refreshed=0;
 			route=GetPosListWithAngle(*message, 0);
+			TargetPos = route.data[route.num-1];
 			//
 			print_pos_list(route);
 			break;
@@ -532,20 +534,23 @@ int main(void)
 					//printf("reach dest:%d,%d\n",destx,desty);
 					reachsituation=1;
 					currentstep++;
-					if(currentstep<route.num){			
-						destx=route.data[currentstep].x;
-						desty=route.data[currentstep].y;
-					}
-					else{
+					
+					TargetPos = GetTargetPos(message);
+					if (currentstep == route.num || route.data[route.num-1].x != TargetPos.x || 
+					route.data[route.num-1].y != TargetPos.y){
 						deletePosList(&route);
 						route = GetPosListWithAngle(*message, 0);
 						print_pos_list(route);
-						currentstep=0;
+						currentstep = 0;
 						thisdis = 1000;
 						if(route.num > 0) {
 							destx = route.data[0].x;
 							desty = route.data[0].y;
 						}
+					}
+					else{
+						destx=route.data[currentstep].x;
+						desty=route.data[currentstep].y;
 					}
 					//printf("next dest:%d,%d\n",destx,desty);
 					HAL_Delay(500);
