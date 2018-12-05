@@ -682,8 +682,48 @@ PosList get_posList_with_angle(int st_x, int st_y, int ed_x, int ed_y, short cur
     return posList;
 }
 
+
+
+MapPos GetTargetPos(MessageInfo *info)
+{
+    int onCarPass = -1, oppoHasPass = -1;
+    MapPos targetPos = getPos(-1, -1);
+    for(int i = 0; i < info->passengerNum; ++i) {
+#ifdef PRINT_INFO2
+        printf("pass %d status %d \n", i + 1, info->pass_status[i]);
+#endif
+        if(info->pass_status[i] == 1) {
+            if(info->is_a)
+                onCarPass = i;
+            else oppoHasPass = i;
+        }
+        else if(info->pass_status[i] == 2) {
+            if(info->is_a)
+                oppoHasPass = i;
+            else onCarPass = i;
+        }
+    }
+    if(onCarPass != -1) {
+        targetPos = getPos(info->xe_pos[onCarPass], info->ye_pos[onCarPass]);
+    }
+    else {
+        short minDis = SHORT_INF;
+        for(int i = 0; i < info->passengerNum; ++i) {
+            short dis1 = getDis(info->my_x, info->my_y, info->xs_pos[i], info->ys_pos[i]);
+            if(info->pass_status[i] == 0 && dis1 < minDis) {
+                if(oppoHasPass != -1 || dis1 <= getDis(info->oppo_x, info->oppo_y, info->xs_pos[i], info->ys_pos[i])) {
+                    minDis = dis1;
+                    targetPos = getPos(info->xs_pos[i], info->ys_pos[i]);
+                }
+            }
+        }
+    }
+    return targetPos;
+}
+
 PosList GetPosListWithAngle(MessageInfo info, short curAngle)
 {
+    /*
 #ifdef PRINT_INFO
     printf("begin getNextMove\n");
 #endif
@@ -727,6 +767,9 @@ PosList GetPosListWithAngle(MessageInfo info, short curAngle)
         return get_posList_with_angle(info.my_x, info.my_y, info.xs_pos[targetPass], info.ys_pos[targetPass], curAngle);
 
     }
+     */
+    MapPos targetPos = GetTargetPos(&info);
+    return get_posList_with_angle(info.my_x, info.my_y, targetPos.x, targetPos.y, curAngle);
 }
 
 void print_move_list(MoveList moveList)

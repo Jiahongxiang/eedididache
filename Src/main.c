@@ -47,7 +47,7 @@
 #include "decodemessage.h"
 #include "utils.h"
 
-#define DEBUG_TURN
+//#define DEBUG_TURN
 
 /* USER CODE END Includes */
 

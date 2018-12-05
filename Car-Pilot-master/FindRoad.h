@@ -8,7 +8,7 @@
 //#define DEBUG_MODE
 //#define PRINT_INFO
 //#define TEST_TIME
-#define PRINT_INFO2
+//#define PRINT_INFO2
 
 #ifdef TEST_TIME
 #include <time.h>
@@ -135,6 +135,12 @@ void print_pos_list(PosList posList);
 CarMove GetNextMove(MessageInfo info);
 
 
+/**
+ * 获取终点的Pos，时间复杂度为O(1)
+ * @param info
+ * @return
+ */
+MapPos GetTargetPos(MessageInfo *info);
 
 /**
  * 获取一个PosList,内存需要调用deletePosList自己释放
