@@ -91,10 +91,11 @@ volatile int leftspeed=0,rightspeed=0;
 int idlespeed=0;
 float lefterror[3]={0,0,0},righterror[3]={0,0,0};
 int leftpwm=0,rightpwm=0;
-float lastdis,thisdis=1000;
+float destdis,thisdis=0;
 int reachsituation=0;
 int lastx=0,lasty=0;
 int thisx=0,thisy=0;
+int whetherslow=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -266,36 +267,21 @@ void InitMPU6050()
 /*-----MPU Part end-----*/
 
 double __angle;
-//turning left
+//turning left//turning left
 void turnleft(double destangle){
 	if (destangle >= 35){
-		destangle -= 12;
+		destangle -= 10.5;
 		go(-90,90);
 	}
-	else if (destangle >= 10){
-		destangle -= 7 + (destangle-10)*0.2;
+	else if (destangle >= 12){
+		destangle -= 6 + (destangle)*0.143;
 		go(-90,90);
 	}
 	else{
 		destangle/=2;
 		go(-80,80);
 	}
- 	//-----code changed-----
-	//printf("turning left %f\n",destangle);
 	double tempangle=0;
-	/*
-	while(tempangle<=0.5*destangle && tempangle>=-0.5*destangle){
-		if (TimeUp==1){
-			data=Get_MPU_Data(GYRO_ZOUT_H);
-			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
-			tempangle+=angle_speed*0.01;
-#ifdef DEBUG_TURN
-			__angle+=angle_speed*0.01;
-#endif
-			TimeUp=0;
-		}
-	}
-	*/
 	while(tempangle<=destangle && tempangle>=-1*destangle){
 		if (TimeUp==1){
 			data=Get_MPU_Data(GYRO_ZOUT_H);
@@ -304,7 +290,6 @@ void turnleft(double destangle){
 #ifdef DEBUG_TURN
 			__angle+=angle_speed*0.01;
 #endif
-			//printf("%lf;%f\n",tempangle,angle_speed);
 			TimeUp=0;
 		}
 	}
@@ -315,37 +300,23 @@ void turnleft(double destangle){
 
 void turnright(double destangle){
 	if (destangle >= 35){
-		destangle -= 12;
+		destangle -= 10.5;
 		go(90,-90);
 	}
 	else if (destangle >= 10){
-		destangle -= 7 + (destangle-10)*0.2;
+		destangle -= 6 + (destangle)*0.143;
 		go(90,-90);
 	}
 	else{
 		destangle/=2;
 		go(80,-80);
 	}
-	//-----code changed-----
-	//printf("turning right %f\n",destangle);
 	double tempangle=0;
-	/*
-	while(tempangle<=0.5*destangle && tempangle>=-0.5*destangle){
-		if (TimeUp==1){
-			data=Get_MPU_Data(GYRO_ZOUT_H);
-			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
-			tempangle+=angle_speed*0.01;
-			TimeUp=0;
-			//printf("angle=%lf\n",tempangle);
-		}
-	}
-	*/
 	while(tempangle<=destangle && tempangle>=-1*destangle){
 		if (TimeUp==1){
 			data=Get_MPU_Data(GYRO_ZOUT_H);
 			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
 			tempangle+=angle_speed*0.01;
-			//printf("%lf;%f\n",tempangle,angle_speed);
 			TimeUp=0;
 		}
 	}
@@ -410,26 +381,28 @@ int main(void)
 	uint8_t isA=(HAL_GPIO_ReadPin(GPIOD,GPIO_PIN_2)?0:1);
 	isA=1;
 	current_angle=270;
+	
 #ifndef DEBUG_TURN
 	
+	/*
 	printf("AT\r\n");
 	HAL_UART_Transmit(&huart2,"AT\r\n",4,100);
-	HAL_Delay(3000);
+	HAL_Delay(2000);
 	
 	printf("AT+CWMODE=3\r\n");
 	HAL_UART_Transmit(&huart2,"AT+CWMODE=3\r\n",13,100);
-	HAL_Delay(3000);
-  
+	HAL_Delay(2000);
+  */
 	printf("AT+RST\r\n");
 	HAL_UART_Transmit(&huart2,"AT+RST\r\n",8,100);
-	HAL_Delay(3000);
+	HAL_Delay(1000);
 	
 	printf("AT+CWJAP=\"EDC20\",\"12345678\"\r\n");
 	HAL_UART_Transmit(&huart2,"AT+CWJAP=\"EDC20\",\"12345678\"\r\n",30,100);
 	HAL_Delay(5000);
 
-	printf("AT+CIPSTART=\"TCP\",\"192.168.1.134\",20000\r\n");
-	HAL_UART_Transmit(&huart2,"AT+CIPSTART=\"TCP\",\"192.168.1.134\",20000\r\n",41,100);
+	printf("AT+CIPSTART=\"TCP\",\"192.168.1.108\",20000\r\n");
+	HAL_UART_Transmit(&huart2,"AT+CIPSTART=\"TCP\",\"192.168.1.108\",20000\r\n",41,100);
 	HAL_Delay(2000);
 
 #endif
@@ -448,65 +421,37 @@ int main(void)
 	//initialize position
 	PosList route;
 	MapPos TargetPos;
-
-
-#ifdef DEBUG_TURN
-    __angle=0.0;
-    while(1){
-			go(90,90);
-			HAL_Delay(1000);
-		}
-		while(1)
-    {
-				turnleft(35);
-        int i=0;
-        while(1)
-        {
-            if (TimeUp==1){
-                data=Get_MPU_Data(GYRO_ZOUT_H);
-                angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
-                __angle+=angle_speed*0.01;
-                TimeUp=0;
-                i++;
-            }
-            if(i%50==0) printf("%.1lf\n",__angle);
-            if(100==i)break;
-        }
-    }
-#endif
-
+	
 	while(1){
-		if (refreshed==1){			
-			msgrefresh((char*)rawtext,message,isA);
-			printf("isA=%d",isA);
-			printf("\nmy_x=%d my_y=%d passengerNum=%d\n",
-			message->my_x,message->my_y,message->passengerNum);
-			thisx=message->my_x;
-			thisy=message->my_y;
-			thisdis=sqrt((message->my_x-destx)*(message->my_x-destx)*1.0+(message->my_y-desty)*(message->my_y-desty)*1.0);
-			refreshed=0;
-			route=GetPosListWithAngle(*message, 0);
-			TargetPos = route.data[route.num-1];
-			//
-			print_pos_list(route);
-			break;
+		if(refreshed==1){
+			int gamestart=(rawtext[0]& (3 << 6)) >> 6;
+			printf("gamecondition=%d\n",gamestart);
+			if(gamestart==1) break;
 		}
 	}
 	
+	reachsituation=0;
+	currentstep=0;
+	whetherslow=0;
+	while(1){
+		if (refreshed==1){			
+			msgrefresh((char*)rawtext,message,isA);
+			//printf("\nmy_x=%d my_y=%d passengerNum=%d\n",message->my_x,message->my_y,message->passengerNum);
+			TargetPos = GetTargetPos(message);
+			if(TargetPos.x==-1) continue;
+			route=GetPosListWithAngle(*message, 0);
+			destx=route.data[0].x;
+			desty=route.data[0].y;
+			print_pos_list(route);
+			lastx=message->my_x;
+			lasty=message->my_y;
+			destdis=sqrt((destx-lastx)*(destx-lastx)*1.0+(desty-lasty)*(desty-lasty)*1.0);
+			thisdis=sqrt((message->my_x-lastx)*(message->my_x-lastx)*1.0+(message->my_y-lasty)*(message->my_y-lasty)*1.0);
+			refreshed=0;
+			break;
+		}
+	}
 	printf("initialization finished\n");
-	int reachsituation=0;
-	/*
-	int testroute[36]={68,185,30,185,35,235,69,240,105,205,141,169,169,141,240,69,240,40,230,30,185,30,125,30,90,50,84,71,71,84,50,90,30,25,30,185};
-	routestep=18;
-	currentstep=0;
-	currentstep++;
-	destx=testroute[currentstep*2];
-	desty=testroute[currentstep*2+1];
-	printf("destx=%d,desty=%d\n",destx,desty);
-	*/
-	currentstep=0;
-	destx=route.data[currentstep].x;
-	desty=route.data[currentstep].y;
 	
   /* USER CODE END 2 */
 
@@ -522,42 +467,48 @@ int main(void)
 //////////////////////////////////////////////////////////////////////////////////* USER CODE BEGIN 3 */
 		if (refreshed==1){			
 			msgrefresh((char*)rawtext,message,isA);
-			//printf("isA=%d",isA);
-			//printf("\nmy_x=%d my_y=%d passengerNum=%d\n",
-			//message->my_x,message->my_y,message->passengerNum);
-			/*
-			for (int i=0;i<message->passengerNum;i++){
-				printf("pass_status=%hhd xs_pos=%d ys_pos=%d xe_pos=%d ye_pos=%d\n",
-				message->pass_status[i],message->xs_pos[i],message->ys_pos[i],message->xe_pos[i],message->ye_pos[i]);
-			}
-			*/
 			refreshed=0;
 			//go straight
 			if(reachsituation==0){
-				lastdis=thisdis;
-				thisdis=sqrt((message->my_x-destx)*(message->my_x-destx)*1.0+(message->my_y-desty)*(message->my_y-desty)*1.0);
-				//printf("dis=%f\n",thisdis);
-				if (thisdis > 15) go(80,80);
-				else if (lastdis > 15){
-					go(-80,-80);
-					HAL_Delay(30);
-					go(40,40);
+				thisdis=sqrt((message->my_x-lastx)*(message->my_x-lastx)*1.0+(message->my_y-lasty)*(message->my_y-lasty)*1.0);
+				printf("thisdis=%f,destdis=%f\n",thisdis,destdis);
+				if (thisdis <= destdis-15){
+					go(90,80);
+				}	
+				/*
+				if (thisdis > destdis-15 && thisdis <= destdis-10){
+					go(70,70);
+				}	
+				*/
+				if (thisdis > destdis - 15 && thisdis<=destdis-2) {
+					if(whetherslow==0){
+						go(-80,-80);
+						HAL_Delay(30);
+						whetherslow=1;
+					}
+					go(51,50);
 				}
-				else go(50,50);
-				if(lastdis<thisdis && thisdis<10){
+				if(thisdis> destdis-2){
 					go(0,0);
 					//printf("reach dest:%d,%d\n",destx,desty);
 					reachsituation=1;
 					currentstep++;
-					
 					TargetPos = GetTargetPos(message);
+					while(TargetPos.x==-1){
+						if(refreshed==1){
+							printf("*****\n");
+							msgrefresh((char*)rawtext,message,isA);
+							refreshed=0;
+							TargetPos = GetTargetPos(message);
+						}
+					}
 					if (currentstep == route.num || route.data[route.num-1].x != TargetPos.x || 
 					route.data[route.num-1].y != TargetPos.y){
 						deletePosList(&route);
 						route = GetPosListWithAngle(*message, 0);
 						print_pos_list(route);
 						currentstep = 0;
-						thisdis = 1000;
+						thisdis = 0;
 						if(route.num > 0) {
 							destx = route.data[0].x;
 							desty = route.data[0].y;
@@ -567,22 +518,13 @@ int main(void)
 						destx=route.data[currentstep].x;
 						desty=route.data[currentstep].y;
 					}
-					//printf("next dest:%d,%d\n",destx,desty);
-					HAL_Delay(500);
+					HAL_Delay(200);
 				}
-				/*
-				else{
-					//printf("going\n");
-					
-					go(50,50); //go straight ***pid***
-				}
-				*/
 			}
 			//turning
 			else if(reachsituation==1){
+				whetherslow=0;
 				reachsituation=0;
-				lastx=thisx;
-				lasty=thisy;
 				thisx=message->my_x;
 				thisy=message->my_y;
 				current_angle=turntoangle(thisx,thisy,lastx,lasty);
@@ -601,11 +543,14 @@ int main(void)
 				}
 				go(0,0);
 				//printf("ready to go straight\n");
-				HAL_Delay(500);
+				HAL_Delay(200);
 				//
-				go(50,50);
+				go(41,40);
 				HAL_Delay(100);
 				//
+				lastx=thisx;
+				lasty=thisy;
+				destdis=sqrt((destx-lastx)*(destx-lastx)*1.0+(desty-lasty)*(desty-lasty)*1.0);
 			}
 		}//end if situation =1/0
   }//end main while
