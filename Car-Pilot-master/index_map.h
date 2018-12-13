@@ -14,7 +14,7 @@
 
 #define map_width 270
 extern const unsigned char use_map[map_width][map_width];
-#define max_e_num 82
+#define max_e_num 91
 extern const unsigned char e_be[max_e_num], e_ed[max_e_num];
 #define max_points_num 53
 
