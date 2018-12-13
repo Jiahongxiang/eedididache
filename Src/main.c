@@ -393,7 +393,7 @@ int main(void)
 	HAL_UART_Transmit(&huart2,"AT+CWMODE=3\r\n",13,100);
 	HAL_Delay(2000);
   */
-
+	
 	printf("AT+RST\r\n");
 	HAL_UART_Transmit(&huart2,"AT+RST\r\n",8,100);
 	HAL_Delay(1000);
@@ -428,6 +428,7 @@ int main(void)
 		go(86,80);
 	}
 	*/
+
 	while(1){
 		if(refreshed==1){
 			int gamestart=(rawtext[0]& (3 << 6)) >> 6;
@@ -536,6 +537,25 @@ int main(void)
 					}
 					go(51,50);
 				}
+
+				thisdis=sqrt((message->my_x-lastx)*(message->my_x-lastx)*1.0+(message->my_y-lasty)*(message->my_y-lasty)*1.0);
+				printf("thisdis=%f,destdis=%f\n",thisdis,destdis);
+				if (thisdis <= destdis-15){
+					go(90,80);
+				}	
+				/*
+				if (thisdis > destdis-15 && thisdis <= destdis-10){
+					go(70,70);
+				}	
+				*/
+				if (thisdis > destdis - 15 && thisdis<=destdis-2) {
+					if(whetherslow==0){
+						go(-80,-80);
+						HAL_Delay(30);
+						whetherslow=1;
+					}
+					go(51,50);
+				}
 				
 				if(thisdis> destdis-2){
 					go(0,0);
@@ -599,6 +619,9 @@ int main(void)
 				
 				//printf("ready to go straight\n");
 				HAL_Delay(200);
+				
+				go(41,40);
+				HAL_Delay(100);
 				
 				go(41,40);
 				HAL_Delay(100);
