@@ -72,11 +72,11 @@ void testDecodeMessage()
     msg.passengerNum = 5;
     memset(msg.pass_status, 0, 7);
     msg.is_a = 1;
-    msg.pass_status[3] = 0;
-    msg.xs_pos[0] = 9, msg.ys_pos[0] = 163;
+    msg.pass_status[1] = 0;
+    msg.xs_pos[0] = 172, msg.ys_pos[0] = 152;
     msg.xe_pos[0] = 94, msg.ye_pos[0] = 83;
 
-    msg.xs_pos[1] = 84, msg.ys_pos[1] = 32;
+    msg.xs_pos[1] = 10, msg.ys_pos[1] = 186;
     msg.xe_pos[1] = 146, msg.ye_pos[1] = 30;
 
     msg.xs_pos[2] = 85, msg.ys_pos[2] = 33;
