@@ -48,6 +48,7 @@
 #include "utils.h"
 
 //#define DEBUG_TURN
+//#define DEBUG_STR
 
 /* USER CODE END Includes */
 
@@ -269,17 +270,21 @@ void InitMPU6050()
 double __angle;
 //turning left//turning left
 void turnleft(double destangle){
-	if (destangle >= 35){
-		destangle -= 10.5;
-		go(-90,90);
+	if (destangle >= 45){
+		destangle -= 7;
+		go(-95,95);
 	}
-	else if (destangle >= 12){
-		destangle -= 6 + (destangle)*0.143;
-		go(-90,90);
+	else if (destangle >= 30){
+		destangle -= 6 + (destangle-30)/15.0;
+		go(-95,95);
+	}
+	else if (destangle >= 10){
+		destangle -= 4 + (destangle-10)*0.1;
+		go(-95,95);
 	}
 	else{
-		destangle/=2;
-		go(-80,80);
+		destangle/=1.5;
+		go(-95,95);
 	}
 	double tempangle=0;
 	while(tempangle<=destangle && tempangle>=-1*destangle){
@@ -299,17 +304,21 @@ void turnleft(double destangle){
 }
 
 void turnright(double destangle){
-	if (destangle >= 35){
-		destangle -= 10.5;
-		go(90,-90);
+	if (destangle >= 45){
+		destangle -= 7;
+		go(95,-95);
+	}
+	else if (destangle >= 30){
+		destangle -= 6 + (destangle-30)/15.0;
+		go(95,-95);
 	}
 	else if (destangle >= 10){
-		destangle -= 6 + (destangle)*0.143;
-		go(90,-90);
+		destangle -= 4 + (destangle-10)*0.1;
+		go(95,-95);
 	}
 	else{
-		destangle/=2;
-		go(80,-80);
+		destangle/=1.5;
+		go(95,-95);
 	}
 	double tempangle=0;
 	while(tempangle<=destangle && tempangle>=-1*destangle){
@@ -317,6 +326,9 @@ void turnright(double destangle){
 			data=Get_MPU_Data(GYRO_ZOUT_H);
 			angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
 			tempangle+=angle_speed*0.01;
+#ifdef DEBUG_TURN
+			__angle+=angle_speed*0.01;
+#endif
 			TimeUp=0;
 		}
 	}
@@ -383,6 +395,7 @@ int main(void)
 	current_angle=270;
 	
 #ifndef DEBUG_TURN
+#ifndef DEBUG_STR
 	
 	/*
 	printf("AT\r\n");
@@ -402,10 +415,10 @@ int main(void)
 	HAL_UART_Transmit(&huart2,"AT+CWJAP=\"EDC20\",\"12345678\"\r\n",30,100);
 	HAL_Delay(5000);
 
-	printf("AT+CIPSTART=\"TCP\",\"192.168.1.108\",20000\r\n");
-	HAL_UART_Transmit(&huart2,"AT+CIPSTART=\"TCP\",\"192.168.1.108\",20000\r\n",41,100);
+	printf("AT+CIPSTART=\"TCP\",\"192.168.1.124\",20000\r\n");
+	HAL_UART_Transmit(&huart2,"AT+CIPSTART=\"TCP\",\"192.168.1.124\",20000\r\n",41,100);
 	HAL_Delay(2000);
- 
+#endif
 #endif
 	
 	HAL_TIM_Base_Start_IT(&htim1);
@@ -423,6 +436,34 @@ int main(void)
 	PosList route;
 	MapPos TargetPos;
 	
+#ifdef DEBUG_STR
+	while(1){
+		go(100,95);
+		HAL_Delay(500);
+	}
+#endif
+
+#ifdef DEBUG_TURN
+	__angle = 0.0;
+	int n=0;
+	while(1){
+		turnleft(5);
+		n++;
+		int i=0;
+		while(1){
+			if(TimeUp==1){
+				data=Get_MPU_Data(GYRO_ZOUT_H);
+				angle_speed=(data-gyro_z_offset)*GYRO_SCALE_RANGE/32768.0;
+				__angle+=angle_speed*0.01;
+				TimeUp=0;
+				i++;
+			}
+			if(i%50==0) printf("%.1lf\n",__angle/n);
+			if(i==100) break;
+		}
+	}
+#endif
+
 	/*
 	while(1){
 		go(86,80);
@@ -587,7 +628,7 @@ int main(void)
 						destx=route.data[currentstep].x;
 						desty=route.data[currentstep].y;
 					}
-					HAL_Delay(200);
+					//HAL_Delay(100);
 				}
 			}
 			//turning
@@ -609,22 +650,19 @@ int main(void)
 					turnright(-1*destangle);
 				}
 				go(0,0);
-				
+				/*
 				if(destangle<10 && destangle>-10){
 					HAL_Delay(50);
 				}
 				else{
 				  HAL_Delay(200);
 				}
-				
+				*/
 				//printf("ready to go straight\n");
+				//HAL_Delay(200);
+				
+				go(51,50);
 				HAL_Delay(200);
-				
-				go(41,40);
-				HAL_Delay(100);
-				
-				go(41,40);
-				HAL_Delay(100);
 				
 				lastx=thisx;
 				lasty=thisy;
